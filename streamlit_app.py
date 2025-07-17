@@ -11,12 +11,11 @@ st.title("📈 YouTube Trend Analyzer")
 # Sidebar Filters
 region = st.sidebar.selectbox("Select Region", ["IN", "US", "GB", "CA", "AU"])
 max_results = st.sidebar.slider("Number of Videos", 5, 10, 10)
-days_filter = st.sidebar.selectbox("Show videos uploaded in last...", ["Any", "1 Day", "3 Days", "7 Days"])
+days_filter = st.sidebar.selectbox("Show videos uploaded in last...", ["Any", "3 Days", "7 Days"])
 
 # Filter Mapping
 now = datetime.utcnow()
 cutoff_days = {
-    "1 Day": now - timedelta(days=1),
     "3 Days": now - timedelta(days=3),
     "7 Days": now - timedelta(days=7),
     "Any": None
@@ -27,13 +26,19 @@ upload_cutoff = cutoff_days[days_filter]
 if st.sidebar.button("🔍 Fetch Trending Videos"):
     with st.spinner("Fetching..."):
         all_videos = fetch_trending_videos(region=region, max_results=max_results)
+
         if upload_cutoff:
             filtered = []
             for v in all_videos:
                 upload_time = datetime.strptime(v.get("publishedAt")[:10], "%Y-%m-%d")
                 if upload_time >= upload_cutoff:
                     filtered.append(v)
-            st.session_state.videos = filtered
+
+            if len(filtered) == 0:
+                st.warning("⚠️ No trending videos found in the selected timeframe. Showing all trending videos instead.")
+                st.session_state.videos = all_videos
+            else:
+                st.session_state.videos = filtered
         else:
             st.session_state.videos = all_videos
 
@@ -59,6 +64,8 @@ if "videos" in st.session_state:
             st.write(f"**Views:** {selected_video['viewCount']}")
             st.write(f"**Likes:** {selected_video['likeCount']}")
             st.write(f"**Comments:** {selected_video['commentCount']}")
+            video_url = f"https://www.youtube.com/watch?v={selected_video['videoId']}"
+            st.markdown(f"[▶️ Watch on YouTube]({video_url})", unsafe_allow_html=True)
             st.info("Selected for sentiment analysis.")
 
             # Phase 2: Sentiment Analysis
